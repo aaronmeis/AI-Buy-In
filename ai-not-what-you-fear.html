@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="slides-format" content="viewport">
+    <title>AI: It's Not What You Fear</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+    <style type="text/tailwindcss">
+        @theme {
+            --color-bg: #0b1120;
+            --color-bg-deep: #060c18;
+            --color-surface: #131e35;
+            --color-text: #e8edf5;
+            --color-text-secondary: #94a8c4;
+            --color-text-muted: #5a7090;
+            --color-accent-1: #4f8ef7;
+            --color-accent-2: #7dd3fc;
+            --color-accent-3: #34d399;
+            --color-glass-bg: rgba(255,255,255,0.05);
+            --color-glass-border: rgba(255,255,255,0.09);
+            --color-vignette: rgba(0,0,0,0.5);
+            --font-display: 'Sora', sans-serif;
+            --font-body: 'Inter', sans-serif;
+        }
+    </style>
+
+    <style>
+        :root {
+            --color-bg: #0b1120;
+            --color-text: #e8edf5;
+            --glow-color-rgb: 79,142,247;
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { background: var(--color-bg); margin: 0; }
+        body { font-family: 'Inter', sans-serif; color: var(--color-text); overflow: hidden; height: 100vh; width: 100vw; }
+        .deck { width: 100vw; height: 100vh; position: relative; }
+        .slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--color-bg); display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transform: scale(0.96); transition: opacity 0.7s ease, transform 0.7s ease; pointer-events: none; overflow: hidden; }
+        .slide.active { opacity: 1; transform: scale(1); pointer-events: all; }
+        .slide > .content { position: relative; z-index: 2; width: 100%; max-width: 1100px; padding: clamp(1.5rem, 4vw, 3.5rem); }
+        .nav-controls { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; z-index: 100; background: rgba(11,17,32,0.85); backdrop-filter: blur(12px); padding: 8px 20px; border-radius: 40px; border: 1px solid rgba(79,142,247,0.2); }
+        .nav-btn { width: 36px; height: 36px; border: none; background: rgba(79,142,247,0.1); color: #4f8ef7; border-radius: 50%; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.3s; }
+        .nav-btn:hover { background: rgba(79,142,247,0.25); }
+        .slide-dots { display: flex; gap: 7px; }
+        .slide-dots .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.15); cursor: pointer; transition: background 0.3s, transform 0.3s; }
+        .slide-dots .dot.active { background: #4f8ef7; transform: scale(1.3); }
+        .slide-counter { font-size: 0.78rem; color: #5a7090; min-width: 36px; text-align: center; font-family: 'Inter', sans-serif; }
+        .reveal { opacity: 0; transform: translateY(22px); }
+
+        @keyframes float-slow { 0%{transform:translate(0,0) scale(1);} 25%{transform:translate(55px,-45px) scale(1.1);} 50%{transform:translate(-35px,35px) scale(0.92);} 75%{transform:translate(45px,18px) scale(1.07);} 100%{transform:translate(0,0) scale(1);} }
+        @keyframes float-drift { 0%{transform:translate(0,0) scale(1) rotate(0deg);} 33%{transform:translate(-45px,-55px) scale(1.13) rotate(3deg);} 66%{transform:translate(38px,28px) scale(0.9) rotate(-2deg);} 100%{transform:translate(0,0) scale(1) rotate(0deg);} }
+        @keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-12px);} }
+        @keyframes glow-pulse { 0%,100%{text-shadow:0 0 20px rgba(79,142,247,0.5),0 0 40px rgba(79,142,247,0.2);} 50%{text-shadow:0 0 30px rgba(79,142,247,0.8),0 0 60px rgba(79,142,247,0.3);} }
+
+        .gradient-mesh { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+        .blob { position: absolute; border-radius: 50%; filter: blur(80px); animation: float-slow 11s ease-in-out infinite; }
+        .blob:nth-child(2) { animation: float-drift 15s ease-in-out infinite; }
+        .blob:nth-child(3) { animation: float-slow 19s ease-in-out infinite reverse; }
+        .blob:nth-child(4) { animation: float-drift 13s ease-in-out infinite reverse; }
+
+        .slide::before { content:''; position:absolute; inset:0; z-index:1; pointer-events:none; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"); background-repeat:repeat; background-size:256px 256px; opacity:0.025; mix-blend-mode:overlay; }
+        .slide::after { content:''; position:absolute; inset:0; z-index:1; pointer-events:none; background:radial-gradient(ellipse at center,transparent 50%,var(--color-vignette) 100%); }
+
+        .text-glow { text-shadow: 0 0 20px rgba(79,142,247,0.5), 0 0 40px rgba(79,142,247,0.2); }
+        .stat-glow { text-shadow: 0 0 30px rgba(79,142,247,0.6), 0 0 60px rgba(79,142,247,0.25); animation: glow-pulse 3s ease-in-out infinite; }
+        .green-glow { text-shadow: 0 0 20px rgba(52,211,153,0.6), 0 0 40px rgba(52,211,153,0.25); }
+
+        /* fear slide red accent */
+        .fear-card { border-left: 3px solid #f87171; background: rgba(248,113,113,0.05); border-radius: 0 12px 12px 0; }
+        .ground-card { border-left: 3px solid #4f8ef7; background: rgba(79,142,247,0.05); border-radius: 0 12px 12px 0; }
+        .hope-card { border-left: 3px solid #34d399; background: rgba(52,211,153,0.05); border-radius: 0 12px 12px 0; }
+
+        /* Bar fills */
+        .bar-track { background: rgba(255,255,255,0.06); border-radius: 6px; height: 24px; width: 100%; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 6px; width: 0%; transition: width 0.7s ease; }
+
+        /* timeline */
+        .timeline-line { position: absolute; left: 18px; top: 0; bottom: 0; width: 2px; background: linear-gradient(to bottom, #4f8ef7, #34d399); }
+        .timeline-dot { width: 14px; height: 14px; border-radius: 50%; background: #4f8ef7; box-shadow: 0 0 10px rgba(79,142,247,0.6); flex-shrink: 0; }
+
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; } }
+    </style>
+</head>
+<body>
+
+<div class="mouse-spotlight" style="position:fixed;inset:0;z-index:99;pointer-events:none;"></div>
+
+<div class="deck">
+
+    <!-- SLIDE 1: TITLE -->
+    <div class="slide active" data-slide="1">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:500px;height:500px;top:-120px;right:-80px;background:#1d4ed8;opacity:0.18;"></div>
+            <div class="blob" style="width:350px;height:350px;bottom:-80px;left:-60px;background:#0891b2;opacity:0.13;"></div>
+            <div class="blob" style="width:220px;height:220px;top:42%;left:12%;background:#34d399;opacity:0.10;"></div>
+            <div class="blob" style="width:160px;height:160px;top:20%;right:25%;background:#7c3aed;opacity:0.09;"></div>
+        </div>
+        <canvas class="particle-canvas" style="position:absolute;inset:0;z-index:1;"></canvas>
+        <div class="content text-center">
+            <div style="font-size:5rem;margin-bottom:1rem;animation:float 3.5s ease-in-out infinite;">🤖</div>
+            <h1 class="font-display reveal" style="font-size:clamp(2.4rem,5.5vw,4.5rem);font-weight:700;background:linear-gradient(135deg,#4f8ef7,#7dd3fc,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em;margin-bottom:1rem;line-height:1.1;">AI Is Not What You Fear</h1>
+            <p class="reveal" style="font-size:clamp(0.85rem,1.4vw,1.15rem);color:#5a7090;letter-spacing:0.25em;text-transform:uppercase;margin-bottom:0.5rem;">A Grounded Guide for Aerospace & Defense Teams</p>
+            <p class="reveal" style="font-size:0.85rem;color:#3d5470;letter-spacing:0.1em;text-transform:uppercase;">Resistance → Reality → Readiness</p>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: AGENDA -->
+    <div class="slide" data-slide="2">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:380px;height:380px;top:-80px;right:-60px;background:#1d4ed8;opacity:0.09;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-60px;left:-40px;background:#0891b2;opacity:0.07;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.2em;color:#4f8ef7;margin-bottom:0.5rem;">Our Journey Today</p>
+            <h2 class="font-display reveal" style="font-size:clamp(1.8rem,3.5vw,2.6rem);font-weight:700;margin-bottom:2rem;">Three Acts of Understanding</h2>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.2rem;">
+                <div class="reveal" style="background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.2);border-radius:16px;padding:1.4rem;">
+                    <div style="font-size:2rem;margin-bottom:0.6rem;">😰</div>
+                    <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.15em;color:#f87171;margin-bottom:0.4rem;">Act I · Grounding</div>
+                    <div style="font-size:1rem;font-weight:600;margin-bottom:0.5rem;">The Fear Is Real</div>
+                    <div style="font-size:0.82rem;color:#94a8c4;line-height:1.5;">Acknowledging the worst-case narratives — and why they persist</div>
+                </div>
+                <div class="reveal" style="background:rgba(79,142,247,0.06);border:1px solid rgba(79,142,247,0.2);border-radius:16px;padding:1.4rem;">
+                    <div style="font-size:2rem;margin-bottom:0.6rem;">🔍</div>
+                    <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.15em;color:#4f8ef7;margin-bottom:0.4rem;">Act II · Reality</div>
+                    <div style="font-size:1rem;font-weight:600;margin-bottom:0.5rem;">What AI Actually Does</div>
+                    <div style="font-size:0.82rem;color:#94a8c4;line-height:1.5;">Evidence-backed look at augmentation, productivity, and A&D use cases</div>
+                </div>
+                <div class="reveal" style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:16px;padding:1.4rem;">
+                    <div style="font-size:2rem;margin-bottom:0.6rem;">🚀</div>
+                    <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.15em;color:#34d399;margin-bottom:0.4rem;">Act III · Readiness</div>
+                    <div style="font-size:1rem;font-weight:600;margin-bottom:0.5rem;">The Middle Ground</div>
+                    <div style="font-size:0.82rem;color:#94a8c4;line-height:1.5;">How to adapt, upskill, and work with AI — not against it</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: SECTION DIVIDER - ACT I -->
+    <div class="slide" data-slide="3">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:500px;height:500px;top:-100px;left:-100px;background:#dc2626;opacity:0.12;"></div>
+            <div class="blob" style="width:300px;height:300px;bottom:-60px;right:-40px;background:#f97316;opacity:0.10;"></div>
+            <div class="blob" style="width:180px;height:180px;top:45%;right:20%;background:#fbbf24;opacity:0.08;"></div>
+        </div>
+        <canvas class="particle-canvas-ambient" style="position:absolute;inset:0;z-index:1;"></canvas>
+        <div class="content text-center">
+            <div style="font-size:4rem;margin-bottom:1rem;animation:float 3.5s ease-in-out infinite;">😰</div>
+            <p class="reveal" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.25em;color:#f87171;margin-bottom:0.6rem;">Act I · Grounding</p>
+            <h2 class="font-display reveal" style="font-size:clamp(2rem,4.5vw,3.5rem);font-weight:700;background:linear-gradient(135deg,#f87171,#fb923c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1rem;line-height:1.1;">The Worst of the Worst</h2>
+            <p class="reveal" style="font-size:1rem;color:#94a8c4;max-width:560px;margin:0 auto;line-height:1.6;">Before we can move forward, we must name the fears honestly. Resistance is not ignorance — it is human.</p>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: THE FEARS -->
+    <div class="slide" data-slide="4">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:360px;height:360px;top:-70px;right:-50px;background:#dc2626;opacity:0.07;"></div>
+            <div class="blob" style="width:240px;height:240px;bottom:-50px;left:-30px;background:#f97316;opacity:0.06;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.2em;color:#f87171;margin-bottom:0.4rem;">What People Are Actually Saying</p>
+            <h2 class="font-display reveal" style="font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;margin-bottom:1.5rem;">The Anti-AI Narrative — Acknowledged</h2>
+            <div style="display:flex;flex-direction:column;gap:0.8rem;">
+                <div class="fear-card reveal" style="padding:0.8rem 1rem;">
+                    <div style="display:flex;align-items:flex-start;gap:0.8rem;">
+                        <span style="font-size:1.3rem;flex-shrink:0;">💼</span>
+                        <div>
+                            <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.2rem;">"AI will take my job."</div>
+                            <div style="font-size:0.82rem;color:#94a8c4;">46% of workers who have AI available say they prefer not to use it — they fear being made redundant. <em>(Gallup, 2026)</em></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="fear-card reveal" style="padding:0.8rem 1rem;">
+                    <div style="display:flex;align-items:flex-start;gap:0.8rem;">
+                        <span style="font-size:1.3rem;flex-shrink:0;">🔒</span>
+                        <div>
+                            <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.2rem;">"I can't trust it — it hallucinates and makes things up."</div>
+                            <div style="font-size:0.82rem;color:#94a8c4;">Current AI still fails at 95%+ of complex, ambiguous reasoning tasks. In A&D, reliability concerns are legitimate and non-trivial. <em>(MIT, 2026)</em></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="fear-card reveal" style="padding:0.8rem 1rem;">
+                    <div style="display:flex;align-items:flex-start;gap:0.8rem;">
+                        <span style="font-size:1.3rem;flex-shrink:0;">🕵️</span>
+                        <div>
+                            <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.2rem;">"It's a surveillance and control tool for leadership."</div>
+                            <div style="font-size:0.82rem;color:#94a8c4;">40% of non-users cite ethical concerns and data privacy as primary reasons to resist AI adoption. <em>(Gallup, 2026)</em></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="fear-card reveal" style="padding:0.8rem 1rem;">
+                    <div style="display:flex;align-items:flex-start;gap:0.8rem;">
+                        <span style="font-size:1.3rem;flex-shrink:0;">🤖</span>
+                        <div>
+                            <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.2rem;">"AGI / superintelligence will make humans obsolete."</div>
+                            <div style="font-size:0.82rem;color:#94a8c4;">Existential risk narratives (Terminator, BNW) dominate media coverage. Anthropic's CEO predicts AI surpasses "almost all humans" by 2027. Fear is amplified, not invented.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="fear-card reveal" style="padding:0.8rem 1rem;">
+                    <div style="display:flex;align-items:flex-start;gap:0.8rem;">
+                        <span style="font-size:1.3rem;flex-shrink:0;">📉</span>
+                        <div>
+                            <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.2rem;">"92 million jobs will be destroyed."</div>
+                            <div style="font-size:0.82rem;color:#94a8c4;">WEF does project 92M jobs displaced by 2030 — this is real. The question is: displaced into what? <em>(WEF Future of Jobs, 2025)</em></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 5: HISTORY OF TECH FEAR -->
+    <div class="slide" data-slide="5">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:360px;height:360px;top:-70px;right:-50px;background:#7c3aed;opacity:0.08;"></div>
+            <div class="blob" style="width:240px;height:240px;bottom:-50px;left:-30px;background:#1d4ed8;opacity:0.07;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.2em;color:#a78bfa;margin-bottom:0.4rem;">Historical Perspective</p>
+            <h2 class="font-display reveal" style="font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;margin-bottom:0.4rem;">We Have Always Been Here Before</h2>
+            <p class="reveal" style="font-size:0.85rem;color:#94a8c4;margin-bottom:1.4rem;">Every transformative technology triggered identical fears. The pattern is as old as civilization.</p>
+            <div style="position:relative;padding-left:2.5rem;">
+                <div class="timeline-line"></div>
+                <div style="display:flex;flex-direction:column;gap:1rem;">
+                    <div class="reveal" style="display:flex;align-items:flex-start;gap:1rem;">
+                        <div class="timeline-dot" style="margin-top:3px;flex-shrink:0;"></div>
+                        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.7rem 1rem;flex:1;">
+                            <div style="font-size:0.7rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.1em;">1440s · Printing Press</div>
+                            <div style="font-size:0.88rem;font-weight:500;margin:0.2rem 0;">"We must root out printing or printing will root us out."</div>
+                            <div style="font-size:0.78rem;color:#94a8c4;">— The Vicar of Croydon. Result: The Renaissance, Reformation, mass literacy.</div>
+                        </div>
+                    </div>
+                    <div class="reveal" style="display:flex;align-items:flex-start;gap:1rem;">
+                        <div class="timeline-dot" style="margin-top:3px;flex-shrink:0;background:#7c3aed;box-shadow:0 0 10px rgba(124,58,237,0.6);"></div>
+                        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.7rem 1rem;flex:1;">
+                            <div style="font-size:0.7rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.1em;">1880s · Electricity / Telegraph</div>
+                            <div style="font-size:0.88rem;font-weight:500;margin:0.2rem 0;">Public terror over electrification: "Any doorknob could become an instrument of death."</div>
+                            <div style="font-size:0.78rem;color:#94a8c4;">— Thomas Edison, 1889. Result: Industrial revolution, global communications.</div>
+                        </div>
+                    </div>
+                    <div class="reveal" style="display:flex;align-items:flex-start;gap:1rem;">
+                        <div class="timeline-dot" style="margin-top:3px;flex-shrink:0;background:#0891b2;box-shadow:0 0 10px rgba(8,145,178,0.6);"></div>
+                        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.7rem 1rem;flex:1;">
+                            <div style="font-size:0.7rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.1em;">1980s · ATMs & Computers</div>
+                            <div style="font-size:0.88rem;font-weight:500;margin:0.2rem 0;">ATMs predicted to eliminate bank tellers entirely.</div>
+                            <div style="font-size:0.78rem;color:#94a8c4;">Result: Bank teller employment grew as branch services expanded. New jobs: IT, data analysts, UX designers.</div>
+                        </div>
+                    </div>
+                    <div class="reveal" style="display:flex;align-items:flex-start;gap:1rem;">
+                        <div class="timeline-dot" style="margin-top:3px;flex-shrink:0;background:#34d399;box-shadow:0 0 10px rgba(52,211,153,0.6);"></div>
+                        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.7rem 1rem;flex:1;">
+                            <div style="font-size:0.7rem;color:#5a7090;text-transform:uppercase;letter-spacing:0.1em;">Today · Artificial Intelligence</div>
+                            <div style="font-size:0.88rem;font-weight:500;margin:0.2rem 0;">"AI will replace everything humans do."</div>
+                            <div style="font-size:0.78rem;color:#94a8c4;">Same pattern. Different technology. The question: adapt and lead, or wait and fall behind?</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 6: SECTION DIVIDER - ACT II -->
+    <div class="slide" data-slide="6">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:500px;height:500px;top:-100px;right:-100px;background:#1d4ed8;opacity:0.15;"></div>
+            <div class="blob" style="width:300px;height:300px;bottom:-60px;left:-40px;background:#0891b2;opacity:0.12;"></div>
+            <div class="blob" style="width:180px;height:180px;top:45%;left:20%;background:#4f8ef7;opacity:0.09;"></div>
+        </div>
+        <canvas class="particle-canvas-ambient" style="position:absolute;inset:0;z-index:1;"></canvas>
+        <div class="content text-center">
+            <div style="font-size:4rem;margin-bottom:1rem;animation:float 3.5s ease-in-out infinite;">🔍</div>
+            <p class="reveal" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.25em;color:#4f8ef7;margin-bottom:0.6rem;">Act II · Reality</p>
+            <h2 class="font-display reveal" style="font-size:clamp(2rem,4.5vw,3.5rem);font-weight:700;background:linear-gradient(135deg,#4f8ef7,#7dd3fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1rem;line-height:1.1;">What AI Actually Does</h2>
+            <p class="reveal" style="font-size:1rem;color:#94a8c4;max-width:560px;margin:0 auto;line-height:1.6;">The evidence — from MIT, WEF, and the A&D industry itself — tells a fundamentally different story.</p>
+        </div>
+    </div>
+
+    <!-- SLIDE 7: STAT CALLOUTS - PRODUCTIVITY -->
+    <div class="slide" data-slide="7">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:400px;height:400px;top:-80px;right:-60px;background:#1d4ed8;opacity:0.08;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-50px;left:-30px;background:#0891b2;opacity:0.07;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.2em;color:#4f8ef7;margin-bottom:0.4rem;">Productivity Evidence</p>
+            <h2 class="font-display reveal" style="font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;margin-bottom:1.4rem;">The Numbers Don't Lie</h2>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;">
+                <div class="ground-card reveal" style="padding:1.1rem;border-radius:0 14px 14px 0;">
+                    <div class="stat-glow" style="font-size:2.6rem;font-weight:900;color:#4f8ef7;line-height:1;">+40%</div>
+                    <div style="font-size:0.78rem;color:#94a8c4;margin-top:0.3rem;line-height:1.4;">Performance boost for highly skilled workers using AI within its capabilities</div>
+                    <div style="font-size:0.68rem;color:#3d5470;margin-top:0.4rem;font-style:italic;">MIT Sloan, 2023</div>
+                </div>
+                <div class="ground-card reveal" style="padding:1.1rem;border-radius:0 14px 14px 0;">
+                    <div class="stat-glow" style="font-size:2.6rem;font-weight:900;color:#7dd3fc;line-height:1;">33%</div>
+                    <div style="font-size:0.78rem;color:#94a8c4;margin-top:0.3rem;line-height:1.4;">Workers are 33% more productive per hour when using generative AI</div>
+                    <div style="font-size:0.68rem;color:#3d5470;margin-top:0.4rem;font-style:italic;">St. Louis Federal Reserve, 2024</div>
+                </div>
+                <div class="ground-card reveal" style="padding:1.1rem;border-radius:0 14px 14px 0;">
+                    <div class="stat-glow" style="font-size:2.6rem;font-weight:900;color:#34d399;line-height:1;">2.2 hrs</div>
+                    <div style="font-size:0.78rem;color:#94a8c4;margin-top:0.3rem;line-height:1.4;">Average time saved per week per worker using AI — rising to 4+ hrs for daily users</div>
+                    <div style="font-size:0.68rem;color:#3d5470;margin-top:0.4rem;font-style:italic;">St. Louis Fed Survey, Nov 2024</div>
+                </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:0.7rem;">
+                <div class="reveal">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;font-size:0.8rem;">
+                        <span>Workers saying AI improved quality of work</span><span style="color:#4f8ef7;font-weight:600;">70%</span>
+                    </div>
+                    <div class="bar-track"><div class="bar-fill" data-width="70" style="background:linear-gradient(90deg,#1d4ed8,#4f8ef7);"></div></div>
+                </div>
+                <div class="reveal">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;font-size:0.8rem;">
+                        <span>Workers saying AI exceeded expectations</span><span style="color:#7dd3fc;font-weight:600;">55%</span>
+                    </div>
+                    <div class="bar-track"><div class="bar-fill" data-width="55" style="background:linear-gradient(90deg,#0891b2,#7dd3fc);"></div></div>
+                </div>
+                <div class="reveal">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;font-size:0.8rem;">
+                        <span>Executives who say gen AI will disrupt employee experience</span><span style="color:#a78bfa;font-weight:600;">60%</span>
+                    </div>
+                    <div class="bar-track"><div class="bar-fill" data-width="60" style="background:linear-gradient(90deg,#7c3aed,#a78bfa);"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 8: MIT EPOCH / AUGMENTATION -->
+    <div class="slide" data-slide="8">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:380px;height:380px;top:-70px;left:-50px;background:#0891b2;opacity:0.08;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-50px;right:-30px;background:#1d4ed8;opacity:0.07;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.2em;color:#4f8ef7;margin-bottom:0.4rem;">MIT Sloan Research · March 2025</p>
+            <h2 class="font-display reveal" style="font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;margin-bottom:0.3rem;">AI Complements Humans — It Doesn't Replace Them</h2>
+            <p class="reveal" style="font-size:0.85rem;color:#94a8c4;margin-bottom:1.2rem;">"The EPOCH of AI" study identifies 5 human capabilities AI cannot replicate — and shows they are <em>increasing</em> in demand.</p>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.7rem;margin-bottom:1.2rem;">
+                <div class="reveal" style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.18);border-radius:12px;padding:0.8rem 0.5rem;text-align:center;">
+                    <div style="font-size:1.6rem;margin-bottom:0.3rem;">❤️</div>
+                    <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#4f8ef7;">E</div>
+                    <div style="font-size:0.72rem;color:#94a8c4;margin-top:0.2rem;">Empathy & Emotional Intelligence</div>
+                </div>
+                <div class="reveal" style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.18);border-radius:12px;padding:0.8rem 0.5rem;text-align:center;">
+                    <div style="font-size:1.6rem;margin-bottom:0.3rem;">🤝</div>
+                    <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#7dd3fc;">P</div>
+                    <div style="font-size:0.72rem;color:#94a8c4;margin-top:0.2rem;">Presence & Networking</div>
+                </div>
+                <div class="reveal" style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.18);border-radius:12px;padding:0.8rem 0.5rem;text-align:center;">
+                    <div style="font-size:1.6rem;margin-bottom:0.3rem;">⚖️</div>
+                    <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#34d399;">O</div>
+                    <div style="font-size:0.72rem;color:#94a8c4;margin-top:0.2rem;">Opinion, Judgment & Ethics</div>
+                </div>
+                <div class="reveal" style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.18);border-radius:12px;padding:0.8rem 0.5rem;text-align:center;">
+                    <div style="font-size:1.6rem;margin-bottom:0.3rem;">💡</div>
+                    <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#f59e0b;">C</div>
+                    <div style="font-size:0.72rem;color:#94a8c4;margin-top:0.2rem;">Creativity & Imagination</div>
+                </div>
+                <div class="reveal" style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.18);border-radius:12px;padding:0.8rem 0.5rem;text-align:center;">
+                    <div style="font-size:1.6rem;margin-bottom:0.3rem;">🌟</div>
+                    <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#a78bfa;">H</div>
+                    <div style="font-size:0.72rem;color:#94a8c4;margin-top:0.2rem;">Hope, Vision & Leadership</div>
+                </div>
+            </div>
+            <div class="reveal" style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:12px;padding:0.9rem 1.1rem;">
+                <div style="font-size:0.85rem;color:#94a8c4;line-height:1.6;"><span style="color:#34d399;font-weight:600;">Key finding:</span> Between 2016–2024, human-intensive EPOCH tasks <em>increased</em> in demand across all occupations. New job roles added in 2024 have <em>higher</em> EPOCH requirements than roles that disappeared. <span style="color:#34d399;font-weight:600;">"We deliberately don't call these soft skills — they're the hardest skills of all."</span> — MIT Sloan Prof. Rigobon</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 9: A&D SPECIFIC USE CASES -->
+    <div class="slide" data-slide="9">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:380px;height:380px;top:-70px;right:-50px;background:#1d4ed8;opacity:0.08;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-50px;left:-30px;background:#0891b2;opacity:0.07;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.2em;color:#4f8ef7;margin-bottom:0.4rem;">Aerospace & Defense · Real World</p>
+            <h2 class="font-display reveal" style="font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;margin-bottom:1.2rem;">AI Is Already Working Alongside Us</h2>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.9rem;">
+                <div class="ground-card reveal" style="padding:0.9rem 1rem;">
+                    <div style="display:flex;align-items:flex-start;gap:0.7rem;">
+                        <span style="font-size:1.4rem;flex-shrink:0;">✈️</span>
+                        <div>
+                            <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.2rem;">Loyal Wingman / CCA Program</div>
+                            <div style="font-size:0.78rem;color:#94a8c4;line-height:1.4;">AI-driven uncrewed aircraft (YFQ-44A, YFQ-42A, Ghost Bat) flying <em>alongside</em> human pilots as force multipliers. Boeing, Lockheed, Northrop, Anduril, General Atomics — all competing for $6B contract. Human pilots retain command authority.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ground-card reveal" style="padding:0.9rem 1rem;">
+                    <div style="display:flex;align-items:flex-start;gap:0.7rem;">
+                        <span style="font-size:1.4rem;flex-shrink:0;">🛠️</span>
+                        <div>
+                            <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.2rem;">Predictive Maintenance</div>
+                            <div style="font-size:0.78rem;color:#94a8c4;line-height:1.4;">USAF PANDA tool (C3 AI + GenAI): interprets maintenance narratives, predicts failures before they occur. Pratt & Whitney + Awiros: AI-powered engine inspection in real-time. Technicians use AI to go deeper, not go home.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ground-card reveal" style="padding:0.9rem 1rem;">
+                    <div style="display:flex;align-items:flex-start;gap:0.7rem;">
+                        <span style="font-size:1.4rem;flex-shrink:0;">🎓</span>
+                        <div>
+                            <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.2rem;">Pilot Training Enhancement</div>
+                            <div style="font-size:0.78rem;color:#94a8c4;line-height:1.4;">Lockheed Martin: AI agents trained to minimize radar detection provide F-35 student pilots with alternate flight paths — training tools no human instructor could generate alone.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ground-card reveal" style="padding:0.9rem 1rem;">
+                    <div style="display:flex;align-items:flex-start;gap:0.7rem;">
+                        <span style="font-size:1.4rem;flex-shrink:0;">📄</span>
+                        <div>
+                            <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.2rem;">Document & Knowledge Intelligence</div>
+                            <div style="font-size:0.78rem;color:#94a8c4;line-height:1.4;">AI processes terabytes of TMs, CMMs, and regulatory documents in seconds. Engineers spend less time hunting procedures in fragmented PDFs and more time applying their expertise.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="reveal" style="margin-top:0.9rem;background:rgba(79,142,247,0.06);border:1px solid rgba(79,142,247,0.15);border-radius:10px;padding:0.6rem 1rem;font-size:0.8rem;color:#94a8c4;">
+                🏭 <strong style="color:#7dd3fc;">Honeywell Aerospace, 2026:</strong> "AI in aerospace is about augmentation support, not replacement. That is foundational to who we are."
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 10: WEF JOBS DATA -->
+    <div class="slide" data-slide="10">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:360px;height:360px;top:-70px;right:-50px;background:#0891b2;opacity:0.08;"></div>
+            <div class="blob" style="width:240px;height:240px;bottom:-50px;left:-30px;background:#34d399;opacity:0.07;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.2em;color:#34d399;margin-bottom:0.4rem;">World Economic Forum · 2025</p>
+            <h2 class="font-display reveal" style="font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;margin-bottom:1.2rem;">The Full Jobs Picture: Net +78 Million by 2030</h2>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.2rem;">
+                <div class="reveal" style="background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.18);border-radius:14px;padding:1rem;text-align:center;">
+                    <div style="font-size:2.2rem;font-weight:900;color:#f87171;line-height:1;">92M</div>
+                    <div style="font-size:0.75rem;color:#94a8c4;margin-top:0.3rem;">Jobs displaced globally by 2030</div>
+                </div>
+                <div class="reveal" style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.18);border-radius:14px;padding:1rem;text-align:center;">
+                    <div style="font-size:2.2rem;font-weight:900;color:#34d399;line-height:1;">170M</div>
+                    <div style="font-size:0.75rem;color:#94a8c4;margin-top:0.3rem;">New jobs created globally by 2030</div>
+                </div>
+                <div class="reveal" style="background:rgba(79,142,247,0.06);border:1px solid rgba(79,142,247,0.18);border-radius:14px;padding:1rem;text-align:center;">
+                    <div class="green-glow" style="font-size:2.2rem;font-weight:900;color:#4f8ef7;line-height:1;">+78M</div>
+                    <div style="font-size:0.75rem;color:#94a8c4;margin-top:0.3rem;">Net new jobs (from 1,000+ employers, 55 economies)</div>
+                </div>
+            </div>
+            <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:1rem;">
+                <div style="font-size:0.82rem;font-weight:600;margin-bottom:0.6rem;color:#e8edf5;">The honest caveat — and why it matters for A&D:</div>
+                <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                    <div style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.8rem;color:#94a8c4;">
+                        <span style="color:#f87171;flex-shrink:0;margin-top:1px;">⚠</span>
+                        <span>Displacement and creation <em>don't happen to the same people automatically</em> — transitions require deliberate reskilling investment</span>
+                    </div>
+                    <div style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.8rem;color:#94a8c4;">
+                        <span style="color:#34d399;flex-shrink:0;margin-top:1px;">✓</span>
+                        <span>A&D's highly specialized, cleared, mission-critical workforce has <strong style="color:#7dd3fc;">structural protection</strong> — AI cannot replace security clearances, systems knowledge, or human judgment in contested environments</span>
+                    </div>
+                    <div style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.8rem;color:#94a8c4;">
+                        <span style="color:#34d399;flex-shrink:0;margin-top:1px;">✓</span>
+                        <span>Northrop Grumman (2026): Defense AI operates on sparse data in undefined environments — it <strong style="color:#7dd3fc;">needs human expertise</strong> to function, unlike commercial AI</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 11: SECTION DIVIDER - ACT III -->
+    <div class="slide" data-slide="11">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:500px;height:500px;top:-100px;right:-100px;background:#059669;opacity:0.13;"></div>
+            <div class="blob" style="width:300px;height:300px;bottom:-60px;left:-40px;background:#0d9488;opacity:0.10;"></div>
+            <div class="blob" style="width:180px;height:180px;top:40%;left:18%;background:#34d399;opacity:0.09;"></div>
+        </div>
+        <canvas class="particle-canvas-ambient" style="position:absolute;inset:0;z-index:1;"></canvas>
+        <div class="content text-center">
+            <div style="font-size:4rem;margin-bottom:1rem;animation:float 3.5s ease-in-out infinite;">🚀</div>
+            <p class="reveal" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.25em;color:#34d399;margin-bottom:0.6rem;">Act III · Readiness</p>
+            <h2 class="font-display reveal" style="font-size:clamp(2rem,4.5vw,3.5rem);font-weight:700;background:linear-gradient(135deg,#34d399,#7dd3fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1rem;line-height:1.1;">The Middle Ground</h2>
+            <p class="reveal" style="font-size:1rem;color:#94a8c4;max-width:560px;margin:0 auto;line-height:1.6;">The goal is not blind adoption — or blind resistance. It is <em>informed adaptation</em>: you stay in control.</p>
+        </div>
+    </div>
+
+    <!-- SLIDE 12: THE SPECTRUM -->
+    <div class="slide" data-slide="12">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:380px;height:380px;top:-70px;right:-50px;background:#0891b2;opacity:0.08;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-50px;left:-30px;background:#34d399;opacity:0.07;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.2em;color:#34d399;margin-bottom:0.4rem;">A Framework for Everyone</p>
+            <h2 class="font-display reveal" style="font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;margin-bottom:1.2rem;">Where Do You Want to Be?</h2>
+            <div style="display:flex;flex-direction:column;gap:0.8rem;">
+                <div class="reveal" style="background:rgba(248,113,113,0.05);border:1px solid rgba(248,113,113,0.2);border-radius:12px;padding:0.9rem 1.1rem;display:flex;align-items:center;gap:1rem;">
+                    <div style="font-size:1.8rem;flex-shrink:0;">😠</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;font-size:0.9rem;color:#f87171;">Level 0 · Full Resistor</div>
+                        <div style="font-size:0.8rem;color:#94a8c4;margin-top:0.2rem;">"I refuse." — Your teammates using AI will produce 33–40% more. You will be outpaced, not by AI, but by colleagues who adapt.</div>
+                    </div>
+                    <div style="font-size:0.7rem;color:#5a7090;text-align:right;flex-shrink:0;">Not<br>recommended</div>
+                </div>
+                <div class="reveal" style="background:rgba(251,191,36,0.05);border:1px solid rgba(251,191,36,0.2);border-radius:12px;padding:0.9rem 1.1rem;display:flex;align-items:center;gap:1rem;">
+                    <div style="font-size:1.8rem;flex-shrink:0;">🤔</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;font-size:0.9rem;color:#fbbf24;">Level 1 · Informed Skeptic</div>
+                        <div style="font-size:0.8rem;color:#94a8c4;margin-top:0.2rem;">Use AI for low-stakes, well-defined tasks. Question its outputs. Validate before trusting. Build familiarity at your own pace. This is a completely valid starting point.</div>
+                    </div>
+                    <div style="font-size:0.7rem;color:#34d399;text-align:right;flex-shrink:0;">✓ Good<br>starting point</div>
+                </div>
+                <div class="reveal" style="background:rgba(79,142,247,0.05);border:1px solid rgba(79,142,247,0.22);border-radius:12px;padding:0.9rem 1.1rem;display:flex;align-items:center;gap:1rem;">
+                    <div style="font-size:1.8rem;flex-shrink:0;">🛠️</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;font-size:0.9rem;color:#4f8ef7;">Level 2 · Practical Adopter</div>
+                        <div style="font-size:0.8rem;color:#94a8c4;margin-top:0.2rem;">Integrate AI into specific workflows — documentation, research, code review, analysis. Save 2–4+ hours/week. Apply that time to higher-value judgment and creative work only you can do.</div>
+                    </div>
+                    <div style="font-size:0.7rem;color:#34d399;text-align:right;flex-shrink:0;">✓ Strong<br>middle ground</div>
+                </div>
+                <div class="reveal" style="background:rgba(52,211,153,0.05);border:1px solid rgba(52,211,153,0.22);border-radius:12px;padding:0.9rem 1.1rem;display:flex;align-items:center;gap:1rem;">
+                    <div style="font-size:1.8rem;flex-shrink:0;">⚡</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;font-size:0.9rem;color:#34d399;">Level 3 · AI Multiplier</div>
+                        <div style="font-size:0.8rem;color:#94a8c4;margin-top:0.2rem;">Design workflows, agents, and automation. You are not replaced — you become the architect of AI systems. This is the highest-leverage position in any A&D organization right now.</div>
+                    </div>
+                    <div style="font-size:0.7rem;color:#34d399;text-align:right;flex-shrink:0;">✓ Future<br>proof</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 13: WHAT AI CANNOT DO -->
+    <div class="slide" data-slide="13">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:360px;height:360px;top:-70px;left:-50px;background:#1d4ed8;opacity:0.08;"></div>
+            <div class="blob" style="width:250px;height:250px;bottom:-50px;right:-30px;background:#34d399;opacity:0.07;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.2em;color:#34d399;margin-bottom:0.4rem;">Your Irreplaceable Edge</p>
+            <h2 class="font-display reveal" style="font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;margin-bottom:1.2rem;">What AI Still Cannot Do — And Won't Soon</h2>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.9rem;">
+                <div class="hope-card reveal" style="padding:0.9rem 1rem;">
+                    <div style="font-size:1.3rem;margin-bottom:0.4rem;">🧭</div>
+                    <div style="font-weight:600;font-size:0.88rem;margin-bottom:0.3rem;">Mission Context & Judgment</div>
+                    <div style="font-size:0.78rem;color:#94a8c4;line-height:1.4;">AI cannot weigh the ethical tradeoffs of a rules-of-engagement decision, understand political realities, or take moral responsibility. Human commanders must.</div>
+                </div>
+                <div class="hope-card reveal" style="padding:0.9rem 1rem;">
+                    <div style="font-size:1.3rem;margin-bottom:0.4rem;">🔐</div>
+                    <div style="font-weight:600;font-size:0.88rem;margin-bottom:0.3rem;">Cleared, Contextual Expertise</div>
+                    <div style="font-size:0.78rem;color:#94a8c4;line-height:1.4;">Security clearances, institutional memory, and classified domain knowledge cannot be encoded into an LLM. Your expertise is a moat AI cannot cross.</div>
+                </div>
+                <div class="hope-card reveal" style="padding:0.9rem 1rem;">
+                    <div style="font-size:1.3rem;margin-bottom:0.4rem;">🤝</div>
+                    <div style="font-weight:600;font-size:0.88rem;margin-bottom:0.3rem;">Trust & Relationships</div>
+                    <div style="font-size:0.78rem;color:#94a8c4;line-height:1.4;">Building coalitions, earning stakeholder trust, navigating political dynamics on a program — AI has no social capital. You do.</div>
+                </div>
+                <div class="hope-card reveal" style="padding:0.9rem 1rem;">
+                    <div style="font-size:1.3rem;margin-bottom:0.4rem;">🎯</div>
+                    <div style="font-weight:600;font-size:0.88rem;margin-bottom:0.3rem;">Novel Problem Solving</div>
+                    <div style="font-size:0.78rem;color:#94a8c4;line-height:1.4;">AI fails at novel, out-of-distribution problems — the exact kind that defines defense engineering. When there's no training data, human creativity is the only resource.</div>
+                </div>
+                <div class="hope-card reveal" style="padding:0.9rem 1rem;">
+                    <div style="font-size:1.3rem;margin-bottom:0.4rem;">⚡</div>
+                    <div style="font-weight:600;font-size:0.88rem;margin-bottom:0.3rem;">Contested Environments</div>
+                    <div style="font-size:0.78rem;color:#94a8c4;line-height:1.4;">Defense AI works on sparse, ambiguous data in undefined adversarial settings — it requires human engineers to design, validate, and supervise it continuously.</div>
+                </div>
+                <div class="hope-card reveal" style="padding:0.9rem 1rem;">
+                    <div style="font-size:1.3rem;margin-bottom:0.4rem;">🧠</div>
+                    <div style="font-weight:600;font-size:0.88rem;margin-bottom:0.3rem;">Leadership & Vision</div>
+                    <div style="font-size:0.78rem;color:#94a8c4;line-height:1.4;">Hope, strategy, and inspiring people toward a mission are not computable. MIT's EPOCH research confirms these capabilities are <em>rising</em> in value, not falling.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 14: HOW TO START -->
+    <div class="slide" data-slide="14">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:380px;height:380px;top:-70px;right:-50px;background:#34d399;opacity:0.07;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-50px;left:-30px;background:#0891b2;opacity:0.07;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.2em;color:#34d399;margin-bottom:0.4rem;">Your Practical Playbook</p>
+            <h2 class="font-display reveal" style="font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;margin-bottom:1.2rem;">How to Start — On Your Own Terms</h2>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.9rem;">
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:1rem;">
+                    <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;">
+                        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#4f8ef7);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;flex-shrink:0;">1</div>
+                        <div style="font-weight:600;font-size:0.9rem;">Start with your most tedious task</div>
+                    </div>
+                    <div style="font-size:0.8rem;color:#94a8c4;line-height:1.4;">What do you spend 2+ hours on that a well-prompted AI could draft in 2 minutes? Reports, summaries, documentation, email drafts. Low stakes, high reward.</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:1rem;">
+                    <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;">
+                        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0891b2,#7dd3fc);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;flex-shrink:0;">2</div>
+                        <div style="font-weight:600;font-size:0.9rem;">Always verify — never blindly trust</div>
+                    </div>
+                    <div style="font-size:0.8rem;color:#94a8c4;line-height:1.4;">Treat AI like a very fast, very confident junior analyst. Its outputs need your expert review. This is not a limitation — it's where your value is amplified, not erased.</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:1rem;">
+                    <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;">
+                        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#059669,#34d399);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;flex-shrink:0;">3</div>
+                        <div style="font-weight:600;font-size:0.9rem;">Time-box your experiments</div>
+                    </div>
+                    <div style="font-size:0.8rem;color:#94a8c4;line-height:1.4;">Give yourself 30 minutes per week to try one new AI workflow. McKinsey research: select processes where value is clear, feasibility is high, and investment is manageable.</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:1rem;">
+                    <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;">
+                        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;flex-shrink:0;">4</div>
+                        <div style="font-weight:600;font-size:0.9rem;">Invest in EPOCH skills</div>
+                    </div>
+                    <div style="font-size:0.8rem;color:#94a8c4;line-height:1.4;">Leadership, judgment, relationships, creativity — these are now the <em>hardest</em> and most valuable skills in an AI-augmented workforce. Double down on what makes you human.</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:1rem;">
+                    <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;">
+                        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#d97706,#fbbf24);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;flex-shrink:0;">5</div>
+                        <div style="font-weight:600;font-size:0.9rem;">Define the guardrails you trust</div>
+                    </div>
+                    <div style="font-size:0.8rem;color:#94a8c4;line-height:1.4;">What should AI never be used for in your role? Define your own red lines. Governance is not the enemy of AI — it's what makes AI trustworthy and deployable in A&D.</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:1rem;">
+                    <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;">
+                        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0891b2,#34d399);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;flex-shrink:0;">6</div>
+                        <div style="font-weight:600;font-size:0.9rem;">Share what works — build team literacy</div>
+                    </div>
+                    <div style="font-size:0.8rem;color:#94a8c4;line-height:1.4;">Post a time-saved win in your team channel. One screenshot drives more adoption than any all-hands presentation. IBM: only 6% have begun upskilling meaningfully — early movers own the advantage.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 15: CLOSING / CALL TO ACTION -->
+    <div class="slide" data-slide="15">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:520px;height:520px;top:-110px;right:-90px;background:#1d4ed8;opacity:0.17;"></div>
+            <div class="blob" style="width:350px;height:350px;bottom:-80px;left:-60px;background:#059669;opacity:0.13;"></div>
+            <div class="blob" style="width:220px;height:220px;top:38%;left:10%;background:#7c3aed;opacity:0.09;"></div>
+            <div class="blob" style="width:160px;height:160px;top:20%;right:20%;background:#34d399;opacity:0.08;"></div>
+        </div>
+        <canvas class="particle-canvas" style="position:absolute;inset:0;z-index:1;"></canvas>
+        <div class="content text-center">
+            <div style="font-size:4.5rem;margin-bottom:1rem;animation:float 3.5s ease-in-out infinite;">🛡️</div>
+            <h2 class="font-display reveal" style="font-size:clamp(2rem,4.5vw,3.8rem);font-weight:700;background:linear-gradient(135deg,#4f8ef7,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:0.8rem;line-height:1.1;">The Question Is Not If.</h2>
+            <h3 class="font-display reveal" style="font-size:clamp(1.4rem,3vw,2.2rem);font-weight:300;color:#94a8c4;margin-bottom:1.5rem;">It Is How — And On Whose Terms.</h3>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;max-width:760px;margin:0 auto;">
+                <div class="reveal" style="background:rgba(248,113,113,0.07);border:1px solid rgba(248,113,113,0.2);border-radius:14px;padding:1rem;">
+                    <div style="font-size:1.4rem;margin-bottom:0.4rem;">😰</div>
+                    <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.12em;color:#f87171;margin-bottom:0.3rem;">Grounded</div>
+                    <div style="font-size:0.78rem;color:#94a8c4;">The fears are real and valid. You don't have to pretend they aren't.</div>
+                </div>
+                <div class="reveal" style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.2);border-radius:14px;padding:1rem;">
+                    <div style="font-size:1.4rem;margin-bottom:0.4rem;">🔍</div>
+                    <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.12em;color:#4f8ef7;margin-bottom:0.3rem;">Informed</div>
+                    <div style="font-size:0.78rem;color:#94a8c4;">The evidence shows augmentation, not replacement — especially in A&D.</div>
+                </div>
+                <div class="reveal" style="background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.2);border-radius:14px;padding:1rem;">
+                    <div style="font-size:1.4rem;margin-bottom:0.4rem;">🚀</div>
+                    <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.12em;color:#34d399;margin-bottom:0.3rem;">Ready</div>
+                    <div style="font-size:0.78rem;color:#94a8c4;">Adapt at your own pace. Define your guardrails. Lead the transition.</div>
+                </div>
+            </div>
+            <p class="reveal" style="margin-top:1.4rem;font-size:0.8rem;color:#3d5470;letter-spacing:0.08em;">"AI scales execution. Humans bring judgment, creativity, and meaning." — MIT Sloan, 2025</p>
+        </div>
+    </div>
+
+    <!-- SLIDE 16: REFERENCES -->
+    <div class="slide" data-slide="16">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:380px;height:380px;top:-70px;right:-50px;background:#1d4ed8;opacity:0.07;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-50px;left:-30px;background:#0891b2;opacity:0.06;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.2em;color:#4f8ef7;margin-bottom:0.4rem;">Sources & Further Reading</p>
+            <h2 class="font-display reveal" style="font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;margin-bottom:1.2rem;">References</h2>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.55rem;">
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.6rem 0.85rem;">
+                    <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#4f8ef7;margin-bottom:0.15rem;">Productivity & Augmentation</div>
+                    <div style="font-size:0.75rem;color:#e8edf5;font-weight:500;margin-bottom:0.1rem;">MIT Sloan — Generative AI &amp; Skilled Worker Productivity</div>
+                    <div style="font-size:0.68rem;color:#5a7090;">mitsloan.mit.edu · 2023 &amp; March 2025</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.6rem 0.85rem;">
+                    <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#4f8ef7;margin-bottom:0.15rem;">Macroeconomic Data</div>
+                    <div style="font-size:0.75rem;color:#e8edf5;font-weight:500;margin-bottom:0.1rem;">St. Louis Federal Reserve — GenAI Work Productivity Impact</div>
+                    <div style="font-size:0.68rem;color:#5a7090;">stlouisfed.org · Feb 2025</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.6rem 0.85rem;">
+                    <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#34d399;margin-bottom:0.15rem;">Jobs & Future of Work</div>
+                    <div style="font-size:0.75rem;color:#e8edf5;font-weight:500;margin-bottom:0.1rem;">World Economic Forum — Future of Jobs Report 2025</div>
+                    <div style="font-size:0.68rem;color:#5a7090;">weforum.org · Jan 2025 · 1,000+ employers, 55 economies</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.6rem 0.85rem;">
+                    <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#34d399;margin-bottom:0.15rem;">Human Skills Research</div>
+                    <div style="font-size:0.75rem;color:#e8edf5;font-weight:500;margin-bottom:0.1rem;">MIT Sloan — "The EPOCH of AI": 5 Irreplaceable Human Capabilities</div>
+                    <div style="font-size:0.68rem;color:#5a7090;">mitsloan.mit.edu · March 2025 · Prof. Rigobon et al.</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.6rem 0.85rem;">
+                    <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#a78bfa;margin-bottom:0.15rem;">A&amp;D Industry</div>
+                    <div style="font-size:0.75rem;color:#e8edf5;font-weight:500;margin-bottom:0.1rem;">Honeywell Aerospace — AI in Aviation: Supporting Pilots Safely</div>
+                    <div style="font-size:0.68rem;color:#5a7090;">aerospace.honeywell.com · March 2026</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.6rem 0.85rem;">
+                    <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#a78bfa;margin-bottom:0.15rem;">A&amp;D Industry</div>
+                    <div style="font-size:0.75rem;color:#e8edf5;font-weight:500;margin-bottom:0.1rem;">Northrop Grumman — Defense AI: Worlds Apart From Commercial AI</div>
+                    <div style="font-size:0.68rem;color:#5a7090;">northropgrumman.com · April 2026</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.6rem 0.85rem;">
+                    <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#a78bfa;margin-bottom:0.15rem;">A&amp;D Industry</div>
+                    <div style="font-size:0.75rem;color:#e8edf5;font-weight:500;margin-bottom:0.1rem;">Lockheed Martin — Training Human and AI Teams (CCA / Wingman)</div>
+                    <div style="font-size:0.68rem;color:#5a7090;">lockheedmartin.com · July 2024</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.6rem 0.85rem;">
+                    <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#a78bfa;margin-bottom:0.15rem;">A&amp;D Industry</div>
+                    <div style="font-size:0.75rem;color:#e8edf5;font-weight:500;margin-bottom:0.1rem;">HCLTech — AI in Aerospace &amp; Defense: Unlocking New Possibilities</div>
+                    <div style="font-size:0.68rem;color:#5a7090;">hcltech.com · Aug 2024</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.6rem 0.85rem;">
+                    <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#fbbf24;margin-bottom:0.15rem;">Change Management</div>
+                    <div style="font-size:0.75rem;color:#e8edf5;font-weight:500;margin-bottom:0.1rem;">McKinsey — Reconfiguring Work: Change Management in the Age of Gen AI</div>
+                    <div style="font-size:0.68rem;color:#5a7090;">mckinsey.com · Aug 2025</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.6rem 0.85rem;">
+                    <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#fbbf24;margin-bottom:0.15rem;">Change Management</div>
+                    <div style="font-size:0.75rem;color:#e8edf5;font-weight:500;margin-bottom:0.1rem;">McKinsey — Redefine AI Upskilling as a Change Imperative</div>
+                    <div style="font-size:0.68rem;color:#5a7090;">mckinsey.com · Nov 2025</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.6rem 0.85rem;">
+                    <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#fbbf24;margin-bottom:0.15rem;">Worker Sentiment</div>
+                    <div style="font-size:0.75rem;color:#e8edf5;font-weight:500;margin-bottom:0.1rem;">Fortune — 'I Don't Need Help': Meet AI Resisters (April 2026)</div>
+                    <div style="font-size:0.68rem;color:#5a7090;">fortune.com · April 2026</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.6rem 0.85rem;">
+                    <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#f87171;margin-bottom:0.15rem;">Historical Context</div>
+                    <div style="font-size:0.75rem;color:#e8edf5;font-weight:500;margin-bottom:0.1rem;">Brookings Institution — With New Technology, We've Been Here Before</div>
+                    <div style="font-size:0.68rem;color:#5a7090;">brookings.edu · March 2022</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.6rem 0.85rem;">
+                    <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#f87171;margin-bottom:0.15rem;">Historical Context</div>
+                    <div style="font-size:0.75rem;color:#e8edf5;font-weight:500;margin-bottom:0.1rem;">Forbes — The Truth About AI and Jobs: History Says We'll Be Fine</div>
+                    <div style="font-size:0.68rem;color:#5a7090;">forbes.com · April 2026</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.6rem 0.85rem;">
+                    <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#f87171;margin-bottom:0.15rem;">AI Capabilities</div>
+                    <div style="font-size:0.75rem;color:#e8edf5;font-weight:500;margin-bottom:0.1rem;">MIT Future Tech Lab — New Research Overturns AI Capability View</div>
+                    <div style="font-size:0.68rem;color:#5a7090;">futuretech.mit.edu · April 2026</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+<!-- NAVIGATION -->
+<div class="nav-controls">
+    <button class="nav-btn" onclick="changeSlide(-1)">&#8249;</button>
+    <div class="slide-dots" id="dots"></div>
+    <button class="nav-btn" onclick="changeSlide(1)">&#8250;</button>
+    <span class="slide-counter" id="counter">1 / 16</span>
+</div>
+
+<script>
+    let current = 1;
+    const total = document.querySelectorAll('.slide').length;
+    const dotsContainer = document.getElementById('dots');
+    const counter = document.getElementById('counter');
+    for (let i = 1; i <= total; i++) { const dot = document.createElement('div'); dot.className = 'dot' + (i === 1 ? ' active' : ''); dot.onclick = () => goToSlide(i); dotsContainer.appendChild(dot); }
+
+    function goToSlide(n) {
+        const prev = document.querySelector('.slide.active');
+        const next = document.querySelector(`.slide[data-slide="${n}"]`);
+        if (prev) prev.classList.remove('active');
+        if (next) { next.classList.add('active'); animateSlide(next); }
+        current = n; updateNav();
+    }
+    function changeSlide(dir) { let next = current + dir; if (next < 1) next = total; if (next > total) next = 1; goToSlide(next); }
+    function updateNav() { document.querySelectorAll('.dot').forEach((d, i) => { d.classList.toggle('active', i + 1 === current); }); counter.textContent = current + ' / ' + total; }
+
+    document.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); changeSlide(1); } if (e.key === 'ArrowLeft') { e.preventDefault(); changeSlide(-1); } });
+    let touchStartX = 0;
+    document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+    document.addEventListener('touchend', (e) => { const diff = touchStartX - e.changedTouches[0].clientX; if (Math.abs(diff) > 50) changeSlide(diff > 0 ? 1 : -1); });
+
+    function animateSlide(slide) {
+        slide.querySelectorAll('.reveal').forEach((el, i) => {
+            el.style.transition = 'none';
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.offsetHeight;
+            const delay = i * 0.07;
+            el.style.transition = `opacity 0.4s ease ${delay}s, transform 0.4s ease ${delay}s`;
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0px)';
+        });
+        animateSlideEffects(slide);
+    }
+
+    function animateSlideEffects(slide) {
+        slide.querySelectorAll('.bar-fill:not(.fill-init)').forEach((bar, i) => {
+            bar.classList.add('fill-init');
+            bar.style.width = '0%';
+            bar.style.transition = `width 0.65s ease ${i * 0.1}s`;
+            bar.offsetHeight;
+            bar.style.width = bar.dataset.width + '%';
+        });
+    }
+
+    document.addEventListener('mousemove', (e) => {
+        const spotlight = document.querySelector('.mouse-spotlight');
+        if (spotlight) {
+            spotlight.style.background = `radial-gradient(600px circle at ${e.clientX}px ${e.clientY}px, rgba(79,142,247,0.055), transparent 40%)`;
+        }
+    });
+
+    window.initParticles = function(canvas, options) {
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+        const interactive = options.interactive !== false;
+        const count = options.count || (interactive ? 50 : 16);
+        let mx = -1000, my = -1000;
+        const particles = Array.from({ length: count }, () => ({
+            x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
+            size: Math.random() * 2.2 + 0.7, alpha: Math.random() * 0.3 + 0.1
+        }));
+        if (interactive) {
+            canvas.addEventListener('mousemove', (e) => { const rect = canvas.getBoundingClientRect(); mx = e.clientX - rect.left; my = e.clientY - rect.top; });
+            canvas.addEventListener('mouseleave', () => { mx = -1000; my = -1000; });
+        }
+        (function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                if (interactive) { const dx = p.x - mx, dy = p.y - my, dist = Math.sqrt(dx*dx+dy*dy); if (dist < 110) { const force = (110-dist)/110*2; p.vx += (dx/dist)*force*0.1; p.vy += (dy/dist)*force*0.1; } }
+                p.vx *= 0.98; p.vy *= 0.98; p.x += p.vx; p.y += p.vy;
+                if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
+                if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+                ctx.fillStyle = `rgba(79,142,247,${p.alpha})`; ctx.fill();
+            });
+            requestAnimationFrame(animate);
+        })();
+    };
+    document.querySelectorAll('.particle-canvas').forEach(c => window.initParticles(c, { interactive: true, count: 50 }));
+    document.querySelectorAll('.particle-canvas-ambient').forEach(c => window.initParticles(c, { interactive: false, count: 16 }));
+
+    try { animateSlide(document.querySelector('.slide.active')); } catch(e) { console.warn(e); }
+</script>
+
+</body>
+</html>
